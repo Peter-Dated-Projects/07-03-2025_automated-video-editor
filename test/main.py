@@ -35,6 +35,7 @@ import torch
 import numpy as np
 
 import re
+import scipy.signal as signal
 import warnings
 
 # Filter out specific PyTorch warnings
@@ -112,26 +113,6 @@ assert (
 # ---------------------------------------------------------------------- #
 
 
-def save_audio(
-    raw_audio: list, target_file: str, sample_rate: int = KOKORO_SAMPLE_RATE
-) -> float:
-    """
-    Save the raw audio data to a file.
-    """
-    if not raw_audio:
-        raise ValueError("No audio data to save.")
-
-    # Concatenate all audio segments
-    concatenated_audio = np.concatenate(raw_audio, axis=0)
-
-    # Save to file
-    sf.write(target_file, concatenated_audio, sample_rate)
-
-    # get length
-    audio_length = len(concatenated_audio) / sample_rate
-    return audio_length
-
-
 def generate_segments(
     text: str,
     folder_path: str,
@@ -173,14 +154,32 @@ def generate_segments(
                 audio_segment = aseg
             concat.append(audio_segment)
 
-        # Calculate duration of this segment
-        segment_duration = len(audio_segment) / KOKORO_SAMPLE_RATE
-        duration += segment_duration
-        del audio_segment
+        # Concatenate the segments
+        raw_audio = np.concatenate(concat, axis=0)
 
-        # save audio segment
+        # Calculate original duration (needed for timing)
+        original_duration = len(raw_audio) / KOKORO_SAMPLE_RATE
+
+        # Resample to 44100Hz
+        target_rate = 44100
+        new_length = int(len(raw_audio) * target_rate / KOKORO_SAMPLE_RATE)
+        resampled_audio = signal.resample(raw_audio, new_length)
+
+        # Normalize if needed
+        max_amplitude = np.max(np.abs(resampled_audio))
+        if max_amplitude > 0 and max_amplitude < 0.1:
+            print(
+                f"Segment {i} audio is quiet (max amplitude: {max_amplitude:.4f}), normalizing..."
+            )
+            resampled_audio = resampled_audio / max_amplitude * 0.8
+
+        # Save audio segment directly at 44100Hz
         segment_file = os.path.join(folder_path, f"segment_{i}.wav")
-        save_audio(concat, segment_file)
+        sf.write(segment_file, resampled_audio, target_rate)
+
+        # Use original duration for timing calculations
+        segment_duration = original_duration
+        duration += segment_duration
 
         # create a text clip
         text_clip = (
@@ -210,16 +209,14 @@ def generate_segments(
 def concat_audio_segment_files(
     segments: list, target_file: str, delay: float = 0.1
 ) -> float:
-    """
-    Concatenate all audio segment files into a single file with a specified delay between each.
-    """
     if not segments:
         raise ValueError("No segments to concatenate.")
 
     raw_audio = []
+    target_rate = 44100  # Use 44100Hz consistently
 
     # Create silence array for the delay (filled with zeros)
-    silence_samples = int(delay * KOKORO_SAMPLE_RATE)
+    silence_samples = int(delay * target_rate)  # Use target_rate
     silence = np.zeros((silence_samples,), dtype=np.float32)
     duration = 0.0
 
@@ -231,14 +228,20 @@ def concat_audio_segment_files(
 
         # Load the audio file
         audio_data, sample_rate = sf.read(segment_file)
+        if sample_rate != target_rate:
+            print(
+                f"Warning: Sample rate mismatch in segment {i} ({sample_rate}Hz vs {target_rate}Hz)"
+            )
+
         raw_audio.append(audio_data)
 
         # Add silence after each segment (except the last one)
         if i < len(segments) - 1:
             raw_audio.append(silence)
 
-    # Save the concatenated audio
-    save_audio(raw_audio, target_file, KOKORO_SAMPLE_RATE)
+    # Save the concatenated audio with target_rate
+    sf.write(target_file, np.concatenate(raw_audio, axis=0), target_rate)
+    print(f"Saved concatenated audio at {target_rate}Hz")
 
     # Calculate the total duration
     duration = (
@@ -308,18 +311,8 @@ if new_width > TARGET_VIDEO_WIDTH:
 else:
     print("Warning: Scaled width is smaller than target width. No cropping performed.")
 
-
-frames = []
-timestamp = 0.0
-for i in range(0, int((audio_duration + 1.0) * clip.fps), 2):
-    timestamp = i / clip.fps
-    img = clip.get_frame(timestamp)  # NumPy array (H×W×3)
-    # img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)  # Convert RGB to BGR
-    frames.append(img)
-    if i % 100 == 0:
-        print(f"Extracted frame {i} at time {timestamp:.2f}s")
-print("Extracted", len(frames), "frames from the video clip.")
-clip = ImageSequenceClip(frames, fps=TARGET_FRAMERATE)
+clip = clip.subclipped(0, audio_duration + 1.0)  # Trim to match audio
+clip = clip.with_fps(TARGET_FRAMERATE)  # Set desired framerate
 
 # add rendered text clips to the video
 text_clips = [segment["text_clip"] for segment in audio_segments]
@@ -331,7 +324,17 @@ composite_clip = composite_clip.with_audio(audio_clip)
 print("Added audio to video clip.")
 
 # write final video to file
-composite_clip.write_videofile(TARGET_OUTPUT_FILE)
+composite_clip.write_videofile(
+    TARGET_OUTPUT_FILE,
+    codec="libx264",
+    audio_codec="aac",
+    audio_bitrate="192k",
+    fps=TARGET_FRAMERATE,
+    preset="medium",
+    audio_fps=44100,
+    ffmpeg_params=["-strict", "-2", "-ar", "44100", "-ac", "2"],  # Force audio params
+)
+
 print(f"Final video saved to {TARGET_OUTPUT_FILE}")
 
 # cleanup files
