@@ -64,25 +64,25 @@ assert (
 
 # ---------------------------------------------------------------------- #
 
-SIMULATION_TEXT = """
-This man Ethan is so gay.
-I never knew he was this gay, until the day I met his mom.
-Here's a story about how I met his mom, and how I found out.
+# SIMULATION_TEXT = """
+# This man Ethan is so gay.
+# I never knew he was this gay, until the day I met his mom.
+# Here's a story about how I met his mom, and how I found out.
 
-It was a sunny day in the city, and I was walking down the street when I saw Ethan.
-He was wearing a bright pink shirt, tight jeans, and a pair of rainbow sneakers.
-He looked fabulous, as always.
-I waved at him, and he waved back with a big smile on his face.
-I walked over to him, and we started chatting.
-He told me about his latest fashion finds, his favorite makeup brands, and his plans for the weekend.
-He was so enthusiastic and passionate about everything he talked about.
-I couldn't help but admire his confidence and style.
+# It was a sunny day in the city, and I was walking down the street when I saw Ethan.
+# He was wearing a bright pink shirt, tight jeans, and a pair of rainbow sneakers.
+# He looked fabulous, as always.
+# I waved at him, and he waved back with a big smile on his face.
+# I walked over to him, and we started chatting.
+# He told me about his latest fashion finds, his favorite makeup brands, and his plans for the weekend.
+# He was so enthusiastic and passionate about everything he talked about.
+# I couldn't help but admire his confidence and style.
 
-So I shot him.
+# So I shot him.
 
-The end.
-"""
-# SIMULATION_TEXT = f"{datetime.datetime.now().strftime('%H:%M')} - This is a test text for the BrainrotClipGenerator. I just have to say Ethan is kinda dumb."
+# The end.
+# """
+SIMULATION_TEXT = f"{datetime.datetime.now().strftime('%H:%M')} - This is a test text for the BrainrotClipGenerator. I just have to say Ethan is kinda dumb. Andrew is amazing and hot and beautiful!! I love this man."
 
 SIMULATION_VOICE = BrainrotClipGenerator.KOKORO_VOICES["british"][0]
 SIMULATION_LANGUAGE = BrainrotClipGenerator.KOKORO_LANGUAGES["british"]
