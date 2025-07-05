@@ -90,17 +90,6 @@ SIMULATION_LANGUAGE = BrainrotClipGenerator.KOKORO_LANGUAGES["british"]
 
 # ------------------------------------------------------------------------ #
 
-# generate segments
-# text_segments = generate_segments(
-#     SIMULATION_TEXT,
-#     TARGET_SEGMENTS_FOLDER,
-#     KPipeline(lang_code=SIMULATION_LANGUAGE, device="mps"),
-#     SIMULATION_VOICE,
-#     DEFAULT_TEXT_CLIP_SETTINGS,
-# )
-
-print("Starting!")
-
 
 if __name__ == "__main__":
     # exit()
