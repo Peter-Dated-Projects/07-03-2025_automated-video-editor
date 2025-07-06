@@ -12,11 +12,12 @@ load_dotenv()
 
 
 class RedditScraperBot:
-    def __init__(self):
+    def __init__(self, client_id: str, client_secret: str, user_agent: str, **kwargs):
         self.client = praw.Reddit(
-            client_id=os.environ.get("REDDIT_CLIENT_ID"),
-            client_secret=os.environ.get("REDDIT_SECRET_KEY"),
-            user_agent=os.environ.get("REDDIT_USER_AGENT"),
+            client_id=client_id,
+            client_secret=client_secret,
+            user_agent=user_agent,
+            **kwargs,
         )
 
     # ---------------------------------------------------------------- #
