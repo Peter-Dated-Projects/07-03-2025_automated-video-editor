@@ -114,12 +114,12 @@ class BrainrotClipGenerator:
 
     def setup(self):
         """
-        Set up the generator with a new video file.
-
-        :param video_file: Path to the new video file.
+        Set up the generator with a new video file, looping the video if needed
+        to match or exceed the audio duration.
         """
         if not os.path.exists(self.video_file):
             raise FileNotFoundError(f"Video file not found: {self.video_file}")
+
         self._video_clip = moviepy.VideoFileClip(self.video_file)
         if self.debug_output:
             print(
@@ -164,13 +164,19 @@ class BrainrotClipGenerator:
                     f"(x_offset: 0)"
                 )
 
-        # get audio to be (audio length + 1)
-        self._video_clip = self._video_clip.subclipped(
-            0, self._concatenated_audio_duration + 1
-        )
+        # Loop the video clip to at least the concatenated audio duration + 1 second
+        loop_duration = self._concatenated_audio_duration + 1
+        if self._video_clip.duration < loop_duration:
+            self._video_clip = self._video_clip.loop(duration=loop_duration)
+            if self.debug_output:
+                print(
+                    f"Video clip looped to duration: {self._video_clip.duration:.2f}s "
+                    f"(target: {loop_duration:.2f}s)"
+                )
 
-        # set target fps
+        # Set target fps
         self._video_clip = self._video_clip.with_fps(self.framerate)
+
 
     def split_text_into_segments(self, max_words: int, max_chars: int) -> list:
         """
@@ -294,12 +300,16 @@ class BrainrotClipGenerator:
 
             concat = []
             for _, _, aseg in audio_segment:
-                # Ensure aseg is a tensor or numpy array
                 if hasattr(aseg, "numpy"):
-                    audio_segment = aseg.numpy()
+                    arr = aseg.numpy()
                 else:
-                    audio_segment = aseg
-                concat.append(audio_segment)
+                    arr = aseg
+                concat.append(arr)
+
+            if not concat:
+                if self.debug_output:
+                    print(f"Warning: No audio arrays found for segment {i}. Skipping segment.")
+                continue  # Skip this segment if no audio arrays present
 
             # Concatenate the segments
             raw_audio = np.concatenate(concat, axis=0)
