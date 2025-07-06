@@ -1,3 +1,5 @@
+# Goo GOO GA GA
+
 # change cwd to base directory of repo
 import os
 import sys
