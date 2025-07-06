@@ -344,7 +344,7 @@ class BrainrotClipGenerator:
             text_clip = (
                 TextClip(text=text, **text_settings_instance)
                 .with_position(("center", "center"), relative=True)
-                .with_start(duration - segment_duration)
+                .with_start(duration - segment_duration + self._inter_segment_delay * i)
                 .with_duration(segment_duration)
             )
 
