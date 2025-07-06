@@ -9,6 +9,7 @@ print("Working in directory:", os.getcwd())
 
 # load up dotenv variables
 from dotenv import load_dotenv
+from source.profanityfilter import clean_text
 
 load_dotenv()
 
@@ -146,6 +147,7 @@ I love this man.
 
     # create kokoro instance
     kokoro_pipeline = KPipeline(lang_code=SIMULATION_LANGUAGE, device="mps")
+    SIMULATION_TEXT = clean_text(SIMULATION_TEXT) # wooooooow
 
     # create an instance of the BrainrotClipGenerator
     video_generator = BrainrotClipGenerator(
@@ -175,10 +177,11 @@ I love this man.
         text_settings["height"] = TARGET_VIDEO_HEIGHT * 0.2
         return text_settings
 
-    video_generator.generate_segments(
-        TARGET_SEGMENTS_FOLDER,
-        SIMULATION_VOICE,
-    )
+
+
+
+    video_generator.generate_segments(TARGET_SEGMENTS_FOLDER, SIMULATION_VOICE,)
+    """where audio is being generated"""
 
     # ---------------------------------------------------------------- #
     # modify the text clips to add a pop effect
