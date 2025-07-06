@@ -183,7 +183,6 @@ I love this man.
 
 
     video_generator.generate_segments(TARGET_SEGMENTS_FOLDER, SIMULATION_VOICE,)
-    """where audio is being generated"""
 
     # ---------------------------------------------------------------- #
     # modify the text clips to add a pop effect
