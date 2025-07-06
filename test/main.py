@@ -51,6 +51,7 @@ from source.globals import (
     SOURCE_BACKGROUND_CLIP,
 )
 from source.generator import BrainrotClipGenerator
+from source.redditscraper import RedditScraperBot
 
 
 # ---------------------------------------------------------------- #
@@ -82,8 +83,8 @@ assert (
 
 # The end.
 # """
+SUBREDDIT_NAME = "AITAH"
 SIMULATION_TEXT = f"{datetime.datetime.now().strftime('%H:%M')} - This is a test text for the BrainrotClipGenerator. I just have to say Ethan is kinda dumb. Andrew is amazing and hot and beautiful!! I love this man."
-
 SIMULATION_VOICE = BrainrotClipGenerator.KOKORO_VOICES["british"][0]
 SIMULATION_LANGUAGE = BrainrotClipGenerator.KOKORO_LANGUAGES["british"]
 
@@ -93,6 +94,49 @@ SIMULATION_LANGUAGE = BrainrotClipGenerator.KOKORO_LANGUAGES["british"]
 
 if __name__ == "__main__":
     # exit()
+
+    # ---------------------------------------------------------------- #
+    # create reddit scraper instance
+    reddit_scraper = RedditScraperBot()
+
+    # grab top 10 posts from the AITAH subreddit
+    top_posts = reddit_scraper.get_top_subreddit_posts(SUBREDDIT_NAME, limit=10)
+    print(f"Fetched {len(top_posts)} posts from {SUBREDDIT_NAME} subreddit.")
+    the_chosen_one = top_posts[0]  # just take the first one for now
+    print(f"Chosen post: {the_chosen_one.title}")
+
+    # exxtract post information
+    post_details = reddit_scraper.extract_post_details(the_chosen_one)
+    print("Post details:", post_details)
+
+    # check if it has an image
+    post_media = reddit_scraper.extract_post_media(the_chosen_one)
+    if post_media:
+        print("Post has media:", post_media)
+    else:
+        print("Post has no media.")
+
+    # extract post content
+    post_content = the_chosen_one.selftext
+    if not post_content:
+        print("Post has no content. Exiting instead.")
+        sys.exit(0)
+    SIMULATION_TEXT = post_content
+
+    # print out final results from this stage
+    print("Final simulation text:\n", SIMULATION_TEXT)
+
+    # ---------------------------------------------------------------- #
+    # if you want to manually select input text
+
+    SIMULATION_TEXT = """
+This is a test text for the BrainrotClipGenerator.
+I just have to say Ethan is kinda dumb.
+Andrew is amazing and hot and beautiful!!
+I love this man.
+    """
+
+    # ---------------------------------------------------------------- #
 
     # create kokoro instance
     kokoro_pipeline = KPipeline(lang_code=SIMULATION_LANGUAGE, device="mps")
@@ -109,16 +153,28 @@ if __name__ == "__main__":
 
     # split text into segments
     video_generator.split_text_into_segments(
-        max_words=1e9,
+        max_words=10,
         max_chars=1e9,
     )
 
     # generate audio segments
+    def text_clip_modifier(text_settings: dict, text: str, segment_index: int) -> dict:
+        # check length of words
+        _word_count = len(text.split())
+        if _word_count > 10:
+            text_settings["font_size"] = 80 - 20 * min(1, _word_count / 20)
+
+        # set width + height
+        text_settings["width"] = TARGET_VIDEO_WIDTH * 0.8
+        text_settings["height"] = TARGET_VIDEO_HEIGHT * 0.2
+        return text_settings
+
     video_generator.generate_segments(
         TARGET_SEGMENTS_FOLDER,
         SIMULATION_VOICE,
     )
 
+    # ---------------------------------------------------------------- #
     # modify the text clips to add a pop effect
     # Bouncy pop effect - more playful animation
     def bounce_pop(t):
@@ -141,6 +197,8 @@ if __name__ == "__main__":
 
     # apply the text effect to all segments
     video_generator.apply_text_effect(modifier_func)
+
+    # ---------------------------------------------------------------- #
 
     # concatenate all the audio segment files into a single file
     video_generator.concat_audio_segment_files(

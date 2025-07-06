@@ -255,6 +255,7 @@ class BrainrotClipGenerator:
         folder_path: str,
         voice: str,
         text_clip_settings: dict = None,
+        text_clip_modifier: callable = None,
     ) -> list:
         """
         Segment the input text into manageable chunks.
@@ -328,9 +329,20 @@ class BrainrotClipGenerator:
             segment_duration = resampled_duration
             duration += segment_duration
 
-            # create a text clip
+            # create a text clip + run a modifier function if required
+            text_settings_instance = text_clip_settings.copy()
+            if text_clip_modifier:
+                if not callable(text_clip_modifier):
+                    raise ValueError("text_clip_modifier must be a callable function.")
+
+                # call the function
+                text_settings_instance = text_clip_modifier(
+                    text_settings_instance, text, i
+                )
+
+            # generate text clip
             text_clip = (
-                TextClip(text=text, **text_clip_settings)
+                TextClip(text=text, **text_settings_instance)
                 .with_position(("center", "center"), relative=True)
                 .with_start(duration - segment_duration)
                 .with_duration(segment_duration)
