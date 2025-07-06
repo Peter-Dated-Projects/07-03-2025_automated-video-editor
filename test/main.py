@@ -1,3 +1,5 @@
+# Goo GOO GA GA
+
 # change cwd to base directory of repo
 import os
 import sys
@@ -9,6 +11,7 @@ print("Working in directory:", os.getcwd())
 
 # load up dotenv variables
 from dotenv import load_dotenv
+from source.profanityfilter import clean_text
 
 load_dotenv()
 
@@ -97,7 +100,11 @@ if __name__ == "__main__":
 
     # ---------------------------------------------------------------- #
     # create reddit scraper instance
-    reddit_scraper = RedditScraperBot()
+    reddit_scraper = RedditScraperBot(
+        client_id=os.getenv("REDDIT_CLIENT_ID"),
+        client_secret=os.getenv("REDDIT_SECRET_KEY"),
+        user_agent=os.getenv("REDDIT_USER_AGENT"),
+    )
 
     # grab top 10 posts from the AITAH subreddit
     top_posts = reddit_scraper.get_top_subreddit_posts(SUBREDDIT_NAME, limit=10)
@@ -126,6 +133,8 @@ if __name__ == "__main__":
     # print out final results from this stage
     print("Final simulation text:\n", SIMULATION_TEXT)
 
+    exit()
+
     # ---------------------------------------------------------------- #
     # if you want to manually select input text
 
@@ -140,6 +149,7 @@ I love this man.
 
     # create kokoro instance
     kokoro_pipeline = KPipeline(lang_code=SIMULATION_LANGUAGE, device="mps")
+    SIMULATION_TEXT = clean_text(SIMULATION_TEXT) # wooooooow
 
     # create an instance of the BrainrotClipGenerator
     video_generator = BrainrotClipGenerator(
@@ -169,10 +179,10 @@ I love this man.
         text_settings["height"] = TARGET_VIDEO_HEIGHT * 0.2
         return text_settings
 
-    video_generator.generate_segments(
-        TARGET_SEGMENTS_FOLDER,
-        SIMULATION_VOICE,
-    )
+
+
+
+    video_generator.generate_segments(TARGET_SEGMENTS_FOLDER, SIMULATION_VOICE,)
 
     # ---------------------------------------------------------------- #
     # modify the text clips to add a pop effect
