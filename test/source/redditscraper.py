@@ -101,7 +101,17 @@ if __name__ == "__main__":
     print("Working in directory:", os.getcwd())
 
     # Initialize the RedditScraper
-    scraper = RedditScraperBot()
+    print(
+        "Initializing RedditScraperBot with credentials:",
+        os.environ.get("REDDIT_CLIENT_ID"),
+        os.environ.get("REDDIT_CLIENT_SECRET"),
+        os.environ.get("REDDIT_USER_AGENT"),
+    )
+    scraper = RedditScraperBot(
+        client_id=os.environ.get("REDDIT_CLIENT_ID"),
+        client_secret=os.environ.get("REDDIT_CLIENT_SECRET"),
+        user_agent=os.environ.get("REDDIT_USER_AGENT"),
+    )
 
     # fetch the 10 most recent posts from AITAH subreddit and print them out
     _targets = scraper.get_new_subreddit_posts("AITAH", limit=10)
