@@ -1,0 +1,4 @@
+
+
+# install playwright
+playwright install
