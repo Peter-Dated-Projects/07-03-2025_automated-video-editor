@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Play, Download, Volume2, Sun, Moon, Instagram, Youtube } from "lucide-react";
+import { Play, Download, Volume2, Sun, Moon, Instagram, Youtube, Video } from "lucide-react";
 
 const XIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor">
@@ -150,7 +150,7 @@ export default function BrainrotGenerator() {
             BrainrotGenerator
           </h1>
           <div className="flex-1 flex justify-end">
-            <Button
+            {/* <Button
               variant="ghost"
               size="sm"
               onClick={toggleTheme}
@@ -161,7 +161,7 @@ export default function BrainrotGenerator() {
               ) : (
                 <Moon className="h-4 w-4 text-purple-600" />
               )}
-            </Button>
+            </Button> */}
           </div>
         </div>
       </div>
@@ -348,12 +348,27 @@ export default function BrainrotGenerator() {
                     height: "70vh",
                   }}
                 >
-                  <div className="text-center">
+                  {/* <div className="text-center">
                     <Play className="w-16 h-16 mx-auto mb-4 text-purple-400" />
                     <p className="text-muted-foreground">Video preview will appear here</p>
                     <p className="text-sm text-muted-foreground mt-2">
                       Generate a video to see preview
                     </p>
+                  </div> */}
+                  <div>
+                    <video
+                      controls
+                      style={{
+                        maxWidth: "100%",
+                        maxHeight: "100%",
+                        borderRadius: "0.75rem",
+                        background: "#1e1b4b",
+                        boxShadow: "0 2px 16px 0 rgb(147 51 234 / 0.15)",
+                      }}
+                    >
+                      <source src="/target_output.mp4" type="video/mp4" />
+                      Your browser does not support the video tag.
+                    </video>
                   </div>
                 </div>
               ) : (
