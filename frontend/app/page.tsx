@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Play, Download, Volume2, Instagram, Youtube } from "lucide-react";
+import { set } from "date-fns";
 
 const XIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor">
@@ -27,6 +28,21 @@ const TikTokIcon = ({ className }: { className?: string }) => (
     <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
   </svg>
 );
+
+// ------------------------------------------------------------ //
+// Interfaces
+
+interface AudioTranscription {
+  id: number;
+  filename: string;
+  text: string;
+  url: string;
+  duration: string;
+  size: string;
+}
+
+// ------------------------------------------------------------ //
+// Render component
 
 export default function BrainrotGenerator() {
   const [isDarkMode, setIsDarkMode] = useState(true);
@@ -102,43 +118,118 @@ export default function BrainrotGenerator() {
     audioLanguage: "british",
     audioVoice: "bm_george",
     backgroundVideo: null as File | null,
+    textTimePadding: "0",
+    framerate: "30",
   });
+  const [videoGenerated, setVideoGenerated] = useState(false);
+  const [videoURL, setVideoURL] = useState("");
 
-  const [audioFiles] = useState([
-    { id: 1, name: "brainrot_audio_1.mp3", duration: "2:34", size: "3.2 MB" },
-    { id: 2, name: "brainrot_audio_2.mp3", duration: "1:45", size: "2.1 MB" },
-    { id: 3, name: "brainrot_audio_3.mp3", duration: "3:12", size: "4.5 MB" },
-    { id: 4, name: "brainrot_audio_4.mp3", duration: "2:01", size: "2.8 MB" },
-    { id: 5, name: "brainrot_audio_5.mp3", duration: "1:58", size: "2.7 MB" },
-    { id: 6, name: "brainrot_audio_6.mp3", duration: "2:45", size: "3.8 MB" },
-    { id: 7, name: "brainrot_audio_7.mp3", duration: "1:32", size: "2.3 MB" },
-    { id: 8, name: "brainrot_audio_8.mp3", duration: "3:05", size: "4.2 MB" },
-    { id: 9, name: "brainrot_audio_9.mp3", duration: "2:18", size: "3.1 MB" },
-    { id: 10, name: "brainrot_audio_10.mp3", duration: "1:55", size: "2.6 MB" },
-    { id: 11, name: "brainrot_audio_11.mp3", duration: "2:42", size: "3.5 MB" },
-    { id: 12, name: "brainrot_audio_12.mp3", duration: "1:38", size: "2.4 MB" },
-    { id: 13, name: "brainrot_audio_13.mp3", duration: "3:21", size: "4.7 MB" },
-    { id: 14, name: "brainrot_audio_14.mp3", duration: "2:15", size: "3.0 MB" },
-    { id: 15, name: "brainrot_audio_15.mp3", duration: "1:49", size: "2.5 MB" },
-    { id: 16, name: "brainrot_audio_16.mp3", duration: "2:56", size: "4.0 MB" },
-    { id: 17, name: "brainrot_audio_17.mp3", duration: "1:27", size: "2.2 MB" },
-    { id: 18, name: "brainrot_audio_18.mp3", duration: "3:08", size: "4.3 MB" },
-    { id: 19, name: "brainrot_audio_19.mp3", duration: "2:33", size: "3.4 MB" },
-    { id: 20, name: "brainrot_audio_20.mp3", duration: "1:52", size: "2.8 MB" },
-  ]);
+  const [audioFiles, setAudioFiles] = useState<AudioTranscription[]>([]);
 
+  // iterables
+  const framerates: string[] = ["24", "25", "30", "60"];
+  const textTimePaddings: string[] = [
+    "0",
+    "0.1",
+    "0.2",
+    "0.3",
+    "0.4",
+    "0.5",
+    "0.6",
+    "0.7",
+    "0.8",
+    "0.9",
+    "1.0",
+  ];
   const audioVoices: Record<string, string[]> = {
     british: ["bm_george", "bm_lewis", "bf_emma", "bf_isabella"],
     american: ["af_sarah", "af_olivia", "af_mia", "af_james", "am_adam", "am_michael"],
   };
   const audioLanguages: string[] = ["british", "american"];
 
-  const [videoGenerated, setVideoGenerated] = useState(false);
-
   // ------------------------------------------------------------ //
+  // Functions to handle form data and video generation
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const loadProjectData = async () => {
+    // Fetch initial project data from backend or local storage
+    console.log("Loading project data...");
+
+    // request to backend API to get initial form data
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/form/get_current_project`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error("Failed to fetch project data");
+        }
+        return res.json();
+      })
+      .catch((error) => {
+        console.error("Error loading project data:", error);
+      });
+
+    console.log("Received project data:", response);
+
+    // [1] form data update
+    const responseForm = response.form_data;
+    if (responseForm) {
+      const currentFormData = {
+        source_url: responseForm.source_url,
+        videoTitle: responseForm.video_title,
+        videoDescription: responseForm.video_description,
+        useImageInIntro: responseForm.intro_image,
+        width: responseForm.width,
+        height: responseForm.height,
+        audioLanguage: responseForm.audio_language,
+        audioVoice: responseForm.audio_voice,
+        backgroundVideo: null as File | null, // Placeholder for now
+        textTimePadding: responseForm.text_time_padding,
+        framerate: responseForm.framerate,
+      };
+      setFormData(currentFormData);
+    } else {
+      console.log("No form data found");
+    }
+
+    // [2] video url
+    const videoURL = response.result_url;
+    if (!videoURL) {
+      console.log("No video URL found");
+    } else {
+      setVideoURL(videoURL);
+      setVideoGenerated(true);
+      console.log("Video URL set:", videoURL);
+    }
+
+    // [3] audio file + transcripts
+    const audioDataResponse = response.segment_information;
+    if (!audioDataResponse) {
+      console.log("No audio data found");
+    } else {
+      // Here you would handle the audio data, e.g., set it in state or process it
+      // For now, we just log it
+
+      const audioTranscriptions: AudioTranscription[] = Object.values(audioDataResponse).map(
+        (segment: any) => ({
+          id: segment.index,
+          filename: segment.file?.split("/").pop() || segment.file,
+          text: segment.text,
+          url: segment.audio_url,
+          duration: segment.duration.toString(),
+          size: "unknown",
+        })
+      );
+      setAudioFiles(audioTranscriptions);
+
+      console.log("Audio transcriptions set:", audioTranscriptions);
+    }
   };
 
   const handleGenerate = async () => {
@@ -154,14 +245,17 @@ export default function BrainrotGenerator() {
       height: formData.height,
       audio_language: formData.audioLanguage,
       audio_voice: formData.audioVoice,
-      background_video: "default.mp4", // Placeholder for now
+      background_video: "assets/default.mp4", // Placeholder for now
+
+      text_time_padding: formData.textTimePadding,
+      framerate: formData.framerate,
     };
 
     console.log("Video generation started...");
     console.log("Generation parameters:", formSnippet);
 
     // Post Request to: backend API to generate video
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/form/generate`, {
+    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/form/generate`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -174,14 +268,27 @@ export default function BrainrotGenerator() {
         }
         return res.json();
       })
-      .then((data) => {
-        console.log("Video generation response:", data);
-        setVideoGenerated(true);
-      })
       .catch((error) => {
         console.error("Error generating video:", error);
       });
+
+    // Update local information
+    loadProjectData();
   };
+
+  // ------------------------------------------------------------- //
+  // on startup
+
+  useEffect(() => {
+    // Fetch initial data or perform setup actions
+    console.log("BrainrotGenerator component mounted");
+
+    // Load initial project data
+    loadProjectData();
+  }, []);
+
+  // ----------------------------------------------------------------- //
+  // Render the component
 
   return (
     <div className="min-h-screen bg-background text-foreground  overflow-hidden">
@@ -369,6 +476,49 @@ export default function BrainrotGenerator() {
                     )}
                   </div>
                 </div>
+
+                {/* Audio Voice & Language Selection (2 columns) */}
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Framerate */}
+                  <div className="space-y-1">
+                    <Label>Framerate</Label>
+                    <Select
+                      value={formData.framerate}
+                      onValueChange={(value) => handleInputChange("framerate", value)}
+                    >
+                      <SelectTrigger className="bg-muted border-border">
+                        <SelectValue placeholder="Select a framerate" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {framerates.map((model) => (
+                          <SelectItem key={model} value={model}>
+                            {model}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Text Time Padding */}
+                  <div className="space-y-1">
+                    <Label>Text Time Padding</Label>
+                    <Select
+                      value={formData.textTimePadding}
+                      onValueChange={(value) => handleInputChange("textTimePadding", value)}
+                    >
+                      <SelectTrigger className="bg-muted border-border">
+                        <SelectValue placeholder="Select a text time padding" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {textTimePaddings.map((model) => (
+                          <SelectItem key={model} value={model}>
+                            {model}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -448,7 +598,7 @@ export default function BrainrotGenerator() {
                           boxShadow: "0 2px 16px 0 rgb(147 51 234 / 0.15)",
                         }}
                       >
-                        <source src="/target_output.mp4" type="video/mp4" />
+                        <source src={videoURL} type="video/mp4" />
                         Your browser does not support the video tag.
                       </video>
                     )}
@@ -577,14 +727,7 @@ export default function BrainrotGenerator() {
                   {/* Transcript Column */}
                   <div className="p-4 bg-muted/30 rounded-lg border border-border/50">
                     <p className="text-sm text-foreground leading-relaxed">
-                      {index % 4 === 0 &&
-                        "This is a sample transcript for the generated audio content. It shows what was spoken in the audio file and provides context for the generated speech."}
-                      {index % 4 === 1 &&
-                        "Another example transcript showing different content that might be generated from your video source. This demonstrates varied speech patterns."}
-                      {index % 4 === 2 &&
-                        "Here's a third variation of transcript text to demonstrate how different audio files would have unique content and speaking styles."}
-                      {index % 4 === 3 &&
-                        "Final sample transcript showing how the text content varies across different generated audio files with distinct messaging."}
+                      {audioFiles.map((f) => f.text)[index] || "No transcript available"}
                     </p>
                   </div>
 
@@ -594,9 +737,9 @@ export default function BrainrotGenerator() {
                       <div className="flex items-center space-x-4 min-w-0">
                         <Volume2 className="w-4 h-4 text-purple-400 flex-shrink-0" />
                         <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">{file.name}</p>
+                          <p className="text-sm font-medium truncate">{file.filename}</p>
                           <p className="text-xs text-muted-foreground">
-                            {file.duration} • {file.size}
+                            {Number(file.duration).toFixed(2)}s
                           </p>
                         </div>
                       </div>
