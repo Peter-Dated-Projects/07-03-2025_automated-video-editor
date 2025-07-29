@@ -68,6 +68,10 @@ class RedditScraperBot:
             "url": post.url,
             "created_utc": post.created_utc,
             "num_comments": post.num_comments,
+            "selftext": post.selftext,
+            "id": post.id,
+            "media": self.extract_post_media(post),
+            "comments": self.extract_post_comments(post, limit=10),
         }
 
     def extract_post_comments(self, post, limit: int = 10):
@@ -90,7 +94,37 @@ class RedditScraperBot:
         if hasattr(post, "media") and post.media:
             return post.media.get("reddit_video", {}).get("fallback_url", None)
         return None
+    
+    # ------------------------------------------------------------------ #
+    # url api calls
 
+    def extract_post_details_url(self, url: str):
+        """
+        Extracts details from a Reddit post URL.
+        :param url: URL of the Reddit post.
+        :return: A dictionary containing the post's title, author, score, and URL.
+        """
+        submission = self.client.submission(url=url)
+        return self.extract_post_details(submission)
+
+    def extract_post_comments_url(self, url: str, limit: int = 10):
+        """
+        Extracts comments from a Reddit post URL.
+        :param url: URL of the Reddit post.
+        :param limit: Number of comments to fetch.
+        :return: List of comments.
+        """
+        submission = self.client.submission(url=url)
+        return self.extract_post_comments(submission, limit=limit)
+
+    def extract_post_media_url(self, url: str):
+        """
+        Extracts media from a Reddit post URL.
+        :param url: URL of the Reddit post.
+        :return: URL of the media if available, otherwise None.
+        """
+        submission = self.client.submission(url=url)
+        return self.extract_post_media(submission)
 
 # ---------------------------------------------------------------- #
 

@@ -498,7 +498,7 @@ class BrainrotClipGenerator:
         if self.debug_output:
             print(f"Video rendered successfully to {output_file}.")
 
-    def cleanup(self):
+    def cleanup(self, delete_files: bool = True):
         """
         Clean up resources used by the generator.
         """
@@ -514,28 +514,29 @@ class BrainrotClipGenerator:
             if self.debug_output:
                 print("Composite clip resources cleaned up.")
 
-        # delete generated audio files
-        if self._concatenated_audio_file and os.path.exists(
-            self._concatenated_audio_file
-        ):
-            os.remove(self._concatenated_audio_file)
-            if self.debug_output:
-                print(
-                    f"Removed concatenated audio file: {self._concatenated_audio_file}"
-                )
-        else:
-            if self.debug_output:
-                print("No concatenated audio file to remove.")
-        # delete all segment files
-        for segment in self._video_segments.values():
-            segment_file = segment["file"]
-            if os.path.exists(segment_file):
-                os.remove(segment_file)
+        if delete_files:
+            # delete generated audio files
+            if self._concatenated_audio_file and os.path.exists(
+                self._concatenated_audio_file
+            ):
+                os.remove(self._concatenated_audio_file)
                 if self.debug_output:
-                    print(f"Removed segment file: {segment_file}")
+                    print(
+                        f"Removed concatenated audio file: {self._concatenated_audio_file}"
+                    )
             else:
                 if self.debug_output:
-                    print(f"Segment file does not exist: {segment_file}")
+                    print("No concatenated audio file to remove.")
+            # delete all segment files
+            for segment in self._video_segments.values():
+                segment_file = segment["file"]
+                if os.path.exists(segment_file):
+                    os.remove(segment_file)
+                    if self.debug_output:
+                        print(f"Removed segment file: {segment_file}")
+                else:
+                    if self.debug_output:
+                        print(f"Segment file does not exist: {segment_file}")
 
         # Clear segments
         self._video_segments = {}

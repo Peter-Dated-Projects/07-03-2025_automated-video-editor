@@ -9,6 +9,7 @@ import mimetypes
 # -------------------------------------------------------------------- #
 
 GEMINI_PRO_MODEL = "gemini-2.5-pro"  # Default model, can be changed if needed
+GEMINI_FLASH_2_5_MODEL = "gemini-2.5-flash"  # Flash model for faster responses, if available
 GEMINI_PRO_FLASH_MODEL = (
     "gemini-2.5-flash"  # Flash model for faster responses, if available
 )
