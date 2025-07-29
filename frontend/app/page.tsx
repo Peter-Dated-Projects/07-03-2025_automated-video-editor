@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Play, Download, Volume2, Sun, Moon, Instagram, Youtube, Video } from "lucide-react";
+import { Play, Download, Volume2, Instagram, Youtube } from "lucide-react";
 
 const XIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor">
@@ -89,15 +89,19 @@ export default function BrainrotGenerator() {
 
   const rightWidth = 100 - leftWidth - middleWidth;
 
+  // ------------------------------------------------------------ //
+  // State for form data and audio files
+
   const [formData, setFormData] = useState({
-    url: "",
-    width: "1080",
-    height: "1920",
-    maxLength: "60",
-    audioModel: "",
+    source_url: "",
     videoTitle: "",
     videoDescription: "",
     useImageInIntro: false,
+    width: "1080",
+    height: "1920",
+    audioLanguage: "british",
+    audioVoice: "bm_george",
+    backgroundVideo: null as File | null,
   });
 
   const [audioFiles] = useState([
@@ -123,21 +127,60 @@ export default function BrainrotGenerator() {
     { id: 20, name: "brainrot_audio_20.mp3", duration: "1:52", size: "2.8 MB" },
   ]);
 
-  const audioModels = [
-    "OpenAI TTS-1",
-    "OpenAI TTS-1-HD",
-    "ElevenLabs Multilingual",
-    "Azure Neural Voice",
-    "Google Cloud TTS",
-  ];
+  const audioVoices: Record<string, string[]> = {
+    british: ["bm_george", "bm_lewis", "bf_emma", "bf_isabella"],
+    american: ["af_sarah", "af_olivia", "af_mia", "af_james", "am_adam", "am_michael"],
+  };
+  const audioLanguages: string[] = ["british", "american"];
+
+  const [videoGenerated, setVideoGenerated] = useState(false);
+
+  // ------------------------------------------------------------ //
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     console.log("Generating video with:", formData);
     // Here you would call your backend API
+
+    const formSnippet: Record<string, string | boolean> = {
+      source_url: formData.source_url,
+      video_title: formData.videoTitle,
+      video_description: formData.videoDescription,
+      intro_image: formData.useImageInIntro,
+      width: formData.width,
+      height: formData.height,
+      audio_language: formData.audioLanguage,
+      audio_voice: formData.audioVoice,
+      background_video: "default.mp4", // Placeholder for now
+    };
+
+    console.log("Video generation started...");
+    console.log("Generation parameters:", formSnippet);
+
+    // Post Request to: backend API to generate video
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/form/generate`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(formSnippet),
+    })
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error("Failed to generate video");
+        }
+        return res.json();
+      })
+      .then((data) => {
+        console.log("Video generation response:", data);
+        setVideoGenerated(true);
+      })
+      .catch((error) => {
+        console.error("Error generating video:", error);
+      });
   };
 
   return (
@@ -188,20 +231,54 @@ export default function BrainrotGenerator() {
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* URL Input */}
-                <div className="space-y-2">
-                  <Label htmlFor="url">Source URL</Label>
+                <div className="space-y-1">
+                  <Label htmlFor="url">Reddit Source URL</Label>
                   <Input
                     id="url"
-                    placeholder="https://example.com/video"
-                    value={formData.url}
-                    onChange={(e) => handleInputChange("url", e.target.value)}
+                    placeholder="reddit.com/r/AITAH/something_stupid"
+                    value={formData.source_url}
+                    onChange={(e) => handleInputChange("source_url", e.target.value)}
                     className="bg-muted border-border"
                   />
                 </div>
 
+                {/* Video Title */}
+                <div className="space-y-1">
+                  <Label htmlFor="videoTitle">Video Title</Label>
+                  <Input
+                    id="videoTitle"
+                    placeholder="Enter video title"
+                    value={formData.videoTitle}
+                    onChange={(e) => handleInputChange("videoTitle", e.target.value)}
+                    className="bg-muted border-border"
+                  />
+                </div>
+
+                {/* Video Description */}
+                <div className="space-y-1">
+                  <Label htmlFor="videoDescription">Video Description</Label>
+                  <Textarea
+                    id="videoDescription"
+                    placeholder="Enter video description"
+                    value={formData.videoDescription}
+                    onChange={(e) => handleInputChange("videoDescription", e.target.value)}
+                    className="bg-muted border-border min-h-[60px]"
+                  />
+                </div>
+
+                {/* Use Image in Intro Toggle */}
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="useImageInIntro"
+                    checked={formData.useImageInIntro}
+                    onCheckedChange={(checked) => handleInputChange("useImageInIntro", checked)}
+                  />
+                  <Label htmlFor="useImageInIntro">Use image in intro</Label>
+                </div>
+
                 {/* Dimensions */}
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     <Label htmlFor="width">Width</Label>
                     <Input
                       id="width"
@@ -212,7 +289,7 @@ export default function BrainrotGenerator() {
                       className="bg-muted border-border"
                     />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     <Label htmlFor="height">Height</Label>
                     <Input
                       id="height"
@@ -225,71 +302,72 @@ export default function BrainrotGenerator() {
                   </div>
                 </div>
 
-                {/* Max Length */}
-                <div className="space-y-2">
-                  <Label htmlFor="maxLength">Max Length (seconds)</Label>
-                  <Input
-                    id="maxLength"
-                    type="number"
-                    placeholder="60"
-                    value={formData.maxLength}
-                    onChange={(e) => handleInputChange("maxLength", e.target.value)}
-                    className="bg-muted border-border"
-                  />
+                {/* Audio Voice & Language Selection (2 columns) */}
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Audio Language */}
+                  <div className="space-y-1">
+                    <Label>Audio Language</Label>
+                    <Select
+                      value={formData.audioLanguage}
+                      onValueChange={(value) => handleInputChange("audioLanguage", value)}
+                    >
+                      <SelectTrigger className="bg-muted border-border">
+                        <SelectValue placeholder="Select an audio language" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {audioLanguages.map((model) => (
+                          <SelectItem key={model} value={model}>
+                            {model}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Audio Voice */}
+                  <div className="space-y-1">
+                    <Label>Audio Voice</Label>
+                    <Select
+                      value={formData.audioVoice}
+                      onValueChange={(value) => handleInputChange("audioVoice", value)}
+                    >
+                      <SelectTrigger className="bg-muted border-border">
+                        <SelectValue placeholder="Select an audio voice" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {audioVoices[formData.audioLanguage].map((model) => (
+                          <SelectItem key={model} value={model}>
+                            {model}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
-                {/* Audio Model Selection */}
-                <div className="space-y-2">
-                  <Label>Audio Model</Label>
-                  <Select
-                    value={formData.audioModel}
-                    onValueChange={(value) => handleInputChange("audioModel", value)}
-                  >
-                    <SelectTrigger className="bg-muted border-border">
-                      <SelectValue placeholder="Select an audio model" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {audioModels.map((model) => (
-                        <SelectItem key={model} value={model}>
-                          {model}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Video Title */}
-                <div className="space-y-2">
-                  <Label htmlFor="videoTitle">Video Title</Label>
-                  <Input
-                    id="videoTitle"
-                    placeholder="Enter video title"
-                    value={formData.videoTitle}
-                    onChange={(e) => handleInputChange("videoTitle", e.target.value)}
-                    className="bg-muted border-border"
-                  />
-                </div>
-
-                {/* Video Description */}
-                <div className="space-y-2">
-                  <Label htmlFor="videoDescription">Video Description</Label>
-                  <Textarea
-                    id="videoDescription"
-                    placeholder="Enter video description"
-                    value={formData.videoDescription}
-                    onChange={(e) => handleInputChange("videoDescription", e.target.value)}
-                    className="bg-muted border-border min-h-[100px]"
-                  />
-                </div>
-
-                {/* Use Image in Intro Toggle */}
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="useImageInIntro"
-                    checked={formData.useImageInIntro}
-                    onCheckedChange={(checked) => handleInputChange("useImageInIntro", checked)}
-                  />
-                  <Label htmlFor="useImageInIntro">Use image in intro</Label>
+                {/* Background Video Upload */}
+                <div className="space-y-1">
+                  <Label htmlFor="backgroundVideo">Background Video</Label>
+                  <div className="space-y-2">
+                    <Input
+                      id="backgroundVideo"
+                      type="file"
+                      accept="video/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setFormData((prev) => ({ ...prev, backgroundVideo: file }));
+                        }
+                      }}
+                      className="bg-muted border-border file:mr-4 file:py-3 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-purple-500/10 file:text-purple-400 hover:file:bg-purple-500/20 h-18"
+                    />
+                    {formData.backgroundVideo && (
+                      <div className="text-sm text-muted-foreground">
+                        Selected: {formData.backgroundVideo.name} (
+                        {(formData.backgroundVideo.size / (1024 * 1024)).toFixed(2)} MB)
+                      </div>
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -348,27 +426,32 @@ export default function BrainrotGenerator() {
                     height: "70vh",
                   }}
                 >
-                  {/* <div className="text-center">
-                    <Play className="w-16 h-16 mx-auto mb-4 text-purple-400" />
-                    <p className="text-muted-foreground">Video preview will appear here</p>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      Generate a video to see preview
-                    </p>
-                  </div> */}
-                  <div>
-                    <video
-                      controls
-                      style={{
-                        maxWidth: "100%",
-                        maxHeight: "100%",
-                        borderRadius: "0.75rem",
-                        background: "#1e1b4b",
-                        boxShadow: "0 2px 16px 0 rgb(147 51 234 / 0.15)",
-                      }}
-                    >
-                      <source src="/target_output.mp4" type="video/mp4" />
-                      Your browser does not support the video tag.
-                    </video>
+                  <div className="text-center">
+                    {!videoGenerated ? (
+                      // no video, then show placeholder with play icon
+                      <div>
+                        <Play className="w-16 h-16 mx-auto mb-4 text-purple-400" />
+                        <p className="text-muted-foreground">Video preview will appear here</p>
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Generate a video to see preview
+                        </p>
+                      </div>
+                    ) : (
+                      // create video element with controls
+                      <video
+                        controls
+                        style={{
+                          maxWidth: "100%",
+                          maxHeight: "100%",
+                          borderRadius: "0.75rem",
+                          background: "#1e1b4b",
+                          boxShadow: "0 2px 16px 0 rgb(147 51 234 / 0.15)",
+                        }}
+                      >
+                        <source src="/target_output.mp4" type="video/mp4" />
+                        Your browser does not support the video tag.
+                      </video>
+                    )}
                   </div>
                 </div>
               ) : (
